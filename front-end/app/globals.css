@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body {
+    background: theme(colors.bg.DEFAULT);
+    color: theme(colors.text.DEFAULT);
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    background-image:
+      radial-gradient(ellipse 60% 50% at 50% -10%, rgba(124, 92, 255, 0.18), transparent 60%),
+      linear-gradient(180deg, #0a0b10 0%, #07080d 100%);
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+  ::selection {
+    background: theme(colors.brand.glow);
+  }
+}
+
+@layer components {
+  .glass {
+    @apply bg-bg-card/70 backdrop-blur-md border border-line shadow-card;
+  }
+  .glow-ring {
+    box-shadow:
+      0 0 0 1px rgba(124, 92, 255, 0.4),
+      0 8px 32px rgba(124, 92, 255, 0.25);
+  }
+  .grid-bg {
+    background-image:
+      linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .animate-in {
+    animation: fadeIn 0.4s ease-out both;
+  }
+}
+
+/* Privy modal overrides to match dark theme */
+.privy-css {
+  --privy-color-background: #11131c !important;
+  --privy-color-foreground: #e6e7eb !important;
+  --privy-color-accent: #7c5cff !important;
+}
