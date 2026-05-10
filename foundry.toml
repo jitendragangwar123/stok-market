@@ -4,3 +4,11 @@ out = "out"
 libs = ["lib"]
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
+
+[lint]
+# `block-timestamp` flags any use of `block.timestamp` in comparisons.
+# In this contract every such comparison is a coarse-grained market deadline
+# (hours/days), and validator manipulation is bounded to a few seconds — so
+# the warning does not apply. Suppressing it project-wide keeps the lint
+# output meaningful for genuine issues.
+exclude_lints = ["block-timestamp"]

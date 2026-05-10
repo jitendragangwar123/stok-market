@@ -16,54 +16,54 @@ contract PredictionMarket {
 
     /// @notice Market state enumeration
     enum MarketState {
-        Active,     // Market is open for betting
-        Resolved,   // Market has been resolved
-        Cancelled   // Market has been cancelled
+        Active, // Market is open for betting
+        Resolved, // Market has been resolved
+        Cancelled // Market has been cancelled
     }
 
     /// @notice Outcome enumeration
     enum Outcome {
-        None,   // No outcome set
-        Yes,    // YES outcome
-        No      // NO outcome
+        None, // No outcome set
+        Yes, // YES outcome
+        No // NO outcome
     }
 
     // ============ Structs ============
 
     /// @notice Global configuration
     struct Config {
-        address admin;              // Contract admin address
-        address feeRecipient;       // Fee recipient address
-        uint256 maxFeePercentage;   // Max fee percentage (basis points, 100 = 1%)
-        bool paused;                // Emergency pause flag
+        address admin; // Contract admin address
+        address feeRecipient; // Fee recipient address
+        uint256 maxFeePercentage; // Max fee percentage (basis points, 100 = 1%)
+        bool paused; // Emergency pause flag
     }
 
     /// @notice Configuration snapshot at market creation
     struct ConfigSnapshot {
-        address feeRecipient;       // Fee recipient at creation
-        uint256 maxFeePercentage;   // Max fee percentage at creation
+        address feeRecipient; // Fee recipient at creation
+        uint256 maxFeePercentage; // Max fee percentage at creation
     }
 
     /// @notice Market data structure
     struct Market {
-        uint256 id;                     // Unique market ID
-        string question;                // Market question
-        uint256 resolutionTime;         // Betting end time (unix timestamp)
-        MarketState state;              // Current market state
-        Outcome winningOutcome;         // Winning outcome (if resolved)
-        uint256 yesPool;                // Total YES pool amount
-        uint256 noPool;                 // Total NO pool amount
-        uint256 creationFee;            // Fee paid on creation
-        address creator;                // Market creator address
-        uint256 createdAt;              // Creation timestamp
-        ConfigSnapshot configSnapshot;  // Config snapshot at creation
+        uint256 id; // Unique market ID
+        string question; // Market question
+        uint256 resolutionTime; // Betting end time (unix timestamp)
+        MarketState state; // Current market state
+        Outcome winningOutcome; // Winning outcome (if resolved)
+        uint256 yesPool; // Total YES pool amount
+        uint256 noPool; // Total NO pool amount
+        uint256 creationFee; // Fee paid on creation
+        address creator; // Market creator address
+        uint256 createdAt; // Creation timestamp
+        ConfigSnapshot configSnapshot; // Config snapshot at creation
     }
 
     /// @notice User position in a market
     struct UserPosition {
-        uint256 yesBet;     // Amount bet on YES
-        uint256 noBet;      // Amount bet on NO
-        bool claimed;       // Has user claimed winnings?
+        uint256 yesBet; // Amount bet on YES
+        uint256 noBet; // Amount bet on NO
+        bool claimed; // Has user claimed winnings?
     }
 
     // ============ Errors ============
@@ -95,53 +95,27 @@ contract PredictionMarket {
 
     /// @notice Emitted when a new market is created
     event MarketCreated(
-        uint256 indexed marketId,
-        string question,
-        uint256 resolutionTime,
-        address indexed creator,
-        uint256 fee
+        uint256 indexed marketId, string question, uint256 resolutionTime, address indexed creator, uint256 fee
     );
 
     /// @notice Emitted when a market is resolved
     event MarketResolved(
-        uint256 indexed marketId,
-        Outcome winningOutcome,
-        uint256 yesPool,
-        uint256 noPool,
-        uint256 timestamp
+        uint256 indexed marketId, Outcome winningOutcome, uint256 yesPool, uint256 noPool, uint256 timestamp
     );
 
     /// @notice Emitted when a market is cancelled
-    event MarketCancelled(
-        uint256 indexed marketId,
-        uint256 yesPool,
-        uint256 noPool,
-        uint256 timestamp
-    );
+    event MarketCancelled(uint256 indexed marketId, uint256 yesPool, uint256 noPool, uint256 timestamp);
 
     /// @notice Emitted when a bet is placed
     event BetPlaced(
-        uint256 indexed marketId,
-        address indexed bettor,
-        Outcome outcome,
-        uint256 amount,
-        uint256 timestamp
+        uint256 indexed marketId, address indexed bettor, Outcome outcome, uint256 amount, uint256 timestamp
     );
 
     /// @notice Emitted when winnings are claimed
-    event WinningsClaimed(
-        uint256 indexed marketId,
-        address indexed bettor,
-        uint256 amount,
-        uint256 timestamp
-    );
+    event WinningsClaimed(uint256 indexed marketId, address indexed bettor, uint256 amount, uint256 timestamp);
 
     /// @notice Emitted when configuration is updated
-    event ConfigUpdated(
-        address indexed admin,
-        address feeRecipient,
-        uint256 maxFeePercentage
-    );
+    event ConfigUpdated(address indexed admin, address feeRecipient, uint256 maxFeePercentage);
 
     /// @notice Emitted when contract is paused
     event ContractPaused(address indexed admin);
@@ -234,12 +208,8 @@ contract PredictionMarket {
         stablecoin = IERC20(_stablecoin);
         stablecoinDecimals = _stablecoinDecimals;
 
-        config = Config({
-            admin: _admin,
-            feeRecipient: _feeRecipient,
-            maxFeePercentage: _maxFeePercentage,
-            paused: false
-        });
+        config =
+            Config({admin: _admin, feeRecipient: _feeRecipient, maxFeePercentage: _maxFeePercentage, paused: false});
     }
 
     // ============ Admin Functions ============
@@ -274,10 +244,12 @@ contract PredictionMarket {
     /// @notice Resolves a market with a winning outcome
     /// @param _marketId ID of the market to resolve
     /// @param _winningOutcome Winning outcome (Yes or No)
-    function resolveMarket(
-        uint256 _marketId,
-        Outcome _winningOutcome
-    ) external onlyAdmin nonReentrant marketExists(_marketId) {
+    function resolveMarket(uint256 _marketId, Outcome _winningOutcome)
+        external
+        onlyAdmin
+        nonReentrant
+        marketExists(_marketId)
+    {
         Market storage market = markets[_marketId];
 
         // Validations
@@ -301,13 +273,7 @@ contract PredictionMarket {
         market.state = MarketState.Resolved;
         market.winningOutcome = _winningOutcome;
 
-        emit MarketResolved(
-            _marketId,
-            _winningOutcome,
-            market.yesPool,
-            market.noPool,
-            block.timestamp
-        );
+        emit MarketResolved(_marketId, _winningOutcome, market.yesPool, market.noPool, block.timestamp);
     }
 
     /// @notice Cancels a market
@@ -352,11 +318,12 @@ contract PredictionMarket {
     /// @param _resolutionTime Unix timestamp when betting ends
     /// @param _feeAmount Creation fee amount (with decimals)
     /// @return marketId ID of the created market
-    function createMarket(
-        string calldata _question,
-        uint256 _resolutionTime,
-        uint256 _feeAmount
-    ) external nonReentrant whenNotPaused returns (uint256 marketId) {
+    function createMarket(string calldata _question, uint256 _resolutionTime, uint256 _feeAmount)
+        external
+        nonReentrant
+        whenNotPaused
+        returns (uint256 marketId)
+    {
         // Validations
         if (bytes(_question).length == 0) revert EmptyQuestion();
         if (_resolutionTime <= block.timestamp) revert InvalidResolutionTime();
@@ -393,8 +360,7 @@ contract PredictionMarket {
             creator: msg.sender,
             createdAt: block.timestamp,
             configSnapshot: ConfigSnapshot({
-                feeRecipient: config.feeRecipient,
-                maxFeePercentage: config.maxFeePercentage
+                feeRecipient: config.feeRecipient, maxFeePercentage: config.maxFeePercentage
             })
         });
 
@@ -409,11 +375,12 @@ contract PredictionMarket {
     /// @param _marketId ID of the market
     /// @param _outcome Bet outcome (Yes or No)
     /// @param _amount Amount to bet (with decimals)
-    function placeBet(
-        uint256 _marketId,
-        Outcome _outcome,
-        uint256 _amount
-    ) external nonReentrant whenNotPaused marketExists(_marketId) {
+    function placeBet(uint256 _marketId, Outcome _outcome, uint256 _amount)
+        external
+        nonReentrant
+        whenNotPaused
+        marketExists(_marketId)
+    {
         // Validations
         if (_amount == 0) revert ZeroAmount();
         if (_outcome != Outcome.Yes && _outcome != Outcome.No) revert InvalidOutcome();
@@ -551,10 +518,7 @@ contract PredictionMarket {
     /// @param _marketId ID of the market
     /// @param _user User address
     /// @return UserPosition struct
-    function getUserPosition(
-        uint256 _marketId,
-        address _user
-    ) external view returns (UserPosition memory) {
+    function getUserPosition(uint256 _marketId, address _user) external view returns (UserPosition memory) {
         if (_marketId == 0 || _marketId > marketCounter) revert InvalidMarket();
         return userPositions[_marketId][_user];
     }
@@ -563,10 +527,12 @@ contract PredictionMarket {
     /// @param _marketId ID of the market
     /// @param _user User address
     /// @return payout Calculated payout amount
-    function calculatePayout(
-        uint256 _marketId,
-        address _user
-    ) external view marketExists(_marketId) returns (uint256 payout) {
+    function calculatePayout(uint256 _marketId, address _user)
+        external
+        view
+        marketExists(_marketId)
+        returns (uint256 payout)
+    {
         Market storage market = markets[_marketId];
         UserPosition storage position = userPositions[_marketId][_user];
 
