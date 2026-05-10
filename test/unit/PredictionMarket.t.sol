@@ -894,7 +894,7 @@ contract ClaimWinningsTests is PredictionMarketTest {
 contract ClaimMultipleWinningsTests is PredictionMarketTest {
     function test_ClaimMultiple_BatchClaimsAcrossMarkets() public {
         uint256 m1 = _setupResolvedYesMarket(10 * ONE, 10 * ONE); // alice wins 20
-        uint256 m2 = _setupResolvedYesMarket(5 * ONE, 5 * ONE);   // alice wins 10
+        uint256 m2 = _setupResolvedYesMarket(5 * ONE, 5 * ONE); // alice wins 10
 
         uint256[] memory ids = new uint256[](2);
         ids[0] = m1;
@@ -911,9 +911,9 @@ contract ClaimMultipleWinningsTests is PredictionMarketTest {
         uint256 m1 = _setupResolvedYesMarket(10 * ONE, 10 * ONE);
 
         uint256[] memory ids = new uint256[](3);
-        ids[0] = 0;       // invalid (zero)
+        ids[0] = 0; // invalid (zero)
         ids[1] = m1;
-        ids[2] = 999;     // invalid (out of range)
+        ids[2] = 999; // invalid (out of range)
 
         uint256 aliceBefore = token.balanceOf(alice);
         vm.prank(alice);
@@ -1152,49 +1152,49 @@ contract ReentrantToken is IERC20 {
     }
 }
 
-contract ReentrancyTests is Test {
-    PredictionMarket internal pm;
-    ReentrantToken internal evilToken;
+    contract ReentrancyTests is Test {
+        PredictionMarket internal pm;
+        ReentrantToken internal evilToken;
 
-    address internal admin = makeAddr("admin");
-    address internal feeRecipient = makeAddr("feeRecipient");
-    address internal attacker = makeAddr("attacker");
-    address internal honest = makeAddr("honest");
+        address internal admin = makeAddr("admin");
+        address internal feeRecipient = makeAddr("feeRecipient");
+        address internal attacker = makeAddr("attacker");
+        address internal honest = makeAddr("honest");
 
-    function setUp() public {
-        evilToken = new ReentrantToken();
-        pm = new PredictionMarket(address(evilToken), 6, admin, feeRecipient, 500);
-        evilToken.setTarget(pm);
+        function setUp() public {
+            evilToken = new ReentrantToken();
+            pm = new PredictionMarket(address(evilToken), 6, admin, feeRecipient, 500);
+            evilToken.setTarget(pm);
 
-        evilToken.mint(attacker, 1_000 * 1e6);
-        evilToken.mint(honest, 1_000 * 1e6);
+            evilToken.mint(attacker, 1_000 * 1e6);
+            evilToken.mint(honest, 1_000 * 1e6);
+        }
+
+        function test_Reentrancy_BlocksClaimReentry() public {
+            // Setup market with attacker on YES, honest on NO. YES wins.
+            vm.prank(attacker);
+            uint256 mid = pm.createMarket("Q?", block.timestamp + 1 days, 0);
+
+            vm.prank(attacker);
+            evilToken.approve(address(pm), 10 * 1e6);
+            vm.prank(attacker);
+            pm.placeBet(mid, PredictionMarket.Outcome.Yes, 10 * 1e6);
+
+            vm.prank(honest);
+            evilToken.approve(address(pm), 10 * 1e6);
+            vm.prank(honest);
+            pm.placeBet(mid, PredictionMarket.Outcome.No, 10 * 1e6);
+
+            vm.warp(block.timestamp + 1 days + 1);
+            vm.prank(admin);
+            pm.resolveMarket(mid, PredictionMarket.Outcome.Yes);
+
+            evilToken.setAttack(true, mid);
+
+            // Re-entered claimWinnings inside transfer should revert with ReentrancyGuard,
+            // bubbling up the failure to the outer call
+            vm.expectRevert(PredictionMarket.ReentrancyGuard.selector);
+            vm.prank(attacker);
+            pm.claimWinnings(mid);
+        }
     }
-
-    function test_Reentrancy_BlocksClaimReentry() public {
-        // Setup market with attacker on YES, honest on NO. YES wins.
-        vm.prank(attacker);
-        uint256 mid = pm.createMarket("Q?", block.timestamp + 1 days, 0);
-
-        vm.prank(attacker);
-        evilToken.approve(address(pm), 10 * 1e6);
-        vm.prank(attacker);
-        pm.placeBet(mid, PredictionMarket.Outcome.Yes, 10 * 1e6);
-
-        vm.prank(honest);
-        evilToken.approve(address(pm), 10 * 1e6);
-        vm.prank(honest);
-        pm.placeBet(mid, PredictionMarket.Outcome.No, 10 * 1e6);
-
-        vm.warp(block.timestamp + 1 days + 1);
-        vm.prank(admin);
-        pm.resolveMarket(mid, PredictionMarket.Outcome.Yes);
-
-        evilToken.setAttack(true, mid);
-
-        // Re-entered claimWinnings inside transfer should revert with ReentrancyGuard,
-        // bubbling up the failure to the outer call
-        vm.expectRevert(PredictionMarket.ReentrancyGuard.selector);
-        vm.prank(attacker);
-        pm.claimWinnings(mid);
-    }
-}
