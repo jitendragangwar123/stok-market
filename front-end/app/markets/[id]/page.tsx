@@ -3,12 +3,15 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMarket } from "@/hooks/use-markets";
+import { useMarketHistory } from "@/hooks/use-market-history";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Countdown } from "@/components/countdown";
 import { BetPanel } from "@/components/bet-panel";
 import { PositionPanel } from "@/components/position-panel";
+import { ProbabilityChart } from "@/components/probability-chart";
+import { TradeHistory } from "@/components/trade-history";
 import { MarketState, outcomeLabel, STABLECOIN_SYMBOL } from "@/lib/contracts";
 import { formatDate, formatToken, pct, shortAddr } from "@/lib/format";
 import { ArrowLeft, ChevronRight, ScrollText, User2 } from "lucide-react";
@@ -17,6 +20,11 @@ export default function MarketPage() {
   const { id } = useParams<{ id: string }>();
   const marketId = id ? BigInt(id) : undefined;
   const { data: market, isLoading } = useMarket(marketId);
+  const {
+    data: history,
+    isLoading: historyLoading,
+    error: historyError,
+  } = useMarketHistory(marketId, market?.createdAt);
 
   if (isLoading || !market) {
     return (
@@ -80,6 +88,34 @@ export default function MarketPage() {
             </CardContent>
           </Card>
 
+          <ProbabilityChart
+            data={history ?? []}
+            isLoading={historyLoading}
+            currentYesPct={yesPct}
+          />
+
+          <TradeHistory
+            trades={history ?? []}
+            isLoading={historyLoading}
+            error={historyError as Error | null | undefined}
+          />
+        </div>
+
+        <div className="space-y-4">
+          {market.state === MarketState.Active ? (
+            <BetPanel market={market} />
+          ) : (
+            <Card className="p-5 text-center">
+              <Badge variant={stateBadge.variant} className="mx-auto">
+                {stateBadge.label}
+              </Badge>
+              <p className="mt-3 text-sm text-text-muted">
+                Betting is closed. Use the panel below to claim if you have a position.
+              </p>
+            </Card>
+          )}
+          <PositionPanel market={market} />
+
           <Card>
             <CardContent className="space-y-3 p-6 text-sm">
               <div className="flex items-center gap-2 text-text-muted">
@@ -104,22 +140,6 @@ export default function MarketPage() {
               />
             </CardContent>
           </Card>
-        </div>
-
-        <div className="space-y-4">
-          {market.state === MarketState.Active ? (
-            <BetPanel market={market} />
-          ) : (
-            <Card className="p-5 text-center">
-              <Badge variant={stateBadge.variant} className="mx-auto">
-                {stateBadge.label}
-              </Badge>
-              <p className="mt-3 text-sm text-text-muted">
-                Betting is closed. Use the panel below to claim if you have a position.
-              </p>
-            </Card>
-          )}
-          <PositionPanel market={market} />
         </div>
       </div>
     </div>
