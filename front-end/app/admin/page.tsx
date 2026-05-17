@@ -144,7 +144,8 @@ function AdminRow({
             <Button
               variant="yes"
               size="sm"
-              disabled={!isAdmin || !resolvable || disabled}
+              loading={disabled}
+              disabled={!isAdmin || !resolvable}
               onClick={onResolveYes}
             >
               Resolve YES
@@ -152,7 +153,8 @@ function AdminRow({
             <Button
               variant="no"
               size="sm"
-              disabled={!isAdmin || !resolvable || disabled}
+              loading={disabled}
+              disabled={!isAdmin || !resolvable}
               onClick={onResolveNo}
             >
               Resolve NO
@@ -160,7 +162,8 @@ function AdminRow({
             <Button
               variant="outline"
               size="sm"
-              disabled={!isAdmin || !resolvable || disabled}
+              loading={disabled}
+              disabled={!isAdmin || !resolvable}
               onClick={onCancel}
             >
               Cancel
@@ -168,7 +171,8 @@ function AdminRow({
             <Button
               variant="ghost"
               size="sm"
-              disabled={!emergencyEligible || disabled}
+              loading={disabled}
+              disabled={!emergencyEligible}
               onClick={onEmergencyCancel}
               title="Permissionless after 90 days past resolutionTime"
             >

@@ -4,7 +4,14 @@ import { useState } from "react";
 import { Button } from "./ui/button";
 import { Input, Label } from "./ui/input";
 import { Card } from "./ui/card";
-import { useAllowance, useApprove, usePlaceBet, useTokenBalance } from "@/hooks/use-actions";
+import {
+  FAUCET_AMOUNT,
+  useAllowance,
+  useApprove,
+  useMintTestTokens,
+  usePlaceBet,
+  useTokenBalance,
+} from "@/hooks/use-actions";
 import { useConnectWallet } from "@/hooks/use-connect-wallet";
 import { MarketState, Outcome, STABLECOIN_SYMBOL } from "@/lib/contracts";
 import type { Market } from "@/hooks/use-markets";
@@ -17,10 +24,11 @@ export function BetPanel({ market }: { market: Market }) {
   const [side, setSide] = useState<Outcome.Yes | Outcome.No>(Outcome.Yes);
   const [input, setInput] = useState("");
 
-  const { data: balance } = useTokenBalance();
+  const { data: balance, refetch: refetchBalance } = useTokenBalance();
   const { data: allowance, refetch: refetchAllowance } = useAllowance();
   const { approve, isPending: approving } = useApprove();
   const { placeBet, isPending: betting } = usePlaceBet();
+  const { mint, isPending: minting } = useMintTestTokens();
 
   const amount = parseToken(input || "0");
   const total = market.yesPool + market.noPool;
@@ -147,14 +155,25 @@ export function BetPanel({ market }: { market: Market }) {
               Market closed
             </Button>
           ) : insufficientBalance ? (
-            <Button disabled className="w-full">
-              Insufficient balance
+            <Button
+              variant="primary"
+              className="w-full"
+              loading={minting}
+              onClick={async () => {
+                await mint(FAUCET_AMOUNT);
+                await refetchBalance();
+              }}
+            >
+              {minting
+                ? "Minting…"
+                : `Get ${formatToken(FAUCET_AMOUNT)} ${STABLECOIN_SYMBOL}`}
             </Button>
           ) : needsApproval ? (
             <Button
               variant="primary"
               className="w-full"
-              disabled={approving || amount === 0n}
+              loading={approving}
+              disabled={amount === 0n}
               onClick={async () => {
                 await approve(amount);
                 await refetchAllowance();
@@ -166,10 +185,11 @@ export function BetPanel({ market }: { market: Market }) {
             <Button
               variant={side === Outcome.Yes ? "yes" : "no"}
               className="w-full"
-              disabled={betting || amount === 0n || !address}
+              loading={betting}
+              disabled={amount === 0n || !address}
               onClick={() => placeBet(market.id, side, amount)}
             >
-              <Zap className="h-4 w-4" />
+              {!betting && <Zap className="h-4 w-4" />}
               {betting ? "Submitting…" : `Bet ${input || "0"} on ${side === Outcome.Yes ? "YES" : "NO"}`}
             </Button>
           )}

@@ -45,10 +45,10 @@ export function PositionPanel({ market }: { market: Market }) {
           <Button
             variant="primary"
             className="w-full"
-            disabled={isPending}
+            loading={isPending}
             onClick={() => claim(market.id)}
           >
-            <Trophy className="h-4 w-4" />
+            {!isPending && <Trophy className="h-4 w-4" />}
             {isPending ? "Claiming…" : "Claim"}
           </Button>
         )}
