@@ -52,7 +52,7 @@ export default function CreateMarketPage() {
   async function onSubmit() {
     if (!valid) return;
     const tx = await create(question.trim(), BigInt(ts), fee);
-    if (tx) router.push("/");
+    if (tx) router.push("/markets");
   }
 
   return (
