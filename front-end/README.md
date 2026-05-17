@@ -27,8 +27,8 @@ A modern Next.js 14 (App Router) front-end for the **PredictionMarket** smart co
 cd front-end
 cp .env.example .env.local
 # fill in your Privy app id and the deployed contract addresses
-pnpm install   # or npm install / yarn / bun install
-pnpm dev       # http://localhost:3000
+npm install
+npm run dev    # http://localhost:3000
 ```
 
 ### Required env vars
@@ -65,7 +65,7 @@ pnpm dev       # http://localhost:3000
      --rpc-url http://127.0.0.1:8545 --broadcast
    ```
 
-3. **Front-end** — paste the two addresses into `front-end/.env.local`, then `pnpm dev`.
+3. **Front-end** — paste the two addresses into `front-end/.env.local`, then `npm run dev`.
 
 The ABI is committed under `lib/predictionMarketAbi.json`. To regenerate after a contract change:
 

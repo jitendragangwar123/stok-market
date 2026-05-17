@@ -1,0 +1,32 @@
+name: stok-market-indexer
+description: Envio HyperIndex indexer for the Stok Market PredictionMarket contract
+schema: schema.graphql
+
+# Default field selection drops transaction fields; bring `hash` back so we can
+# build idempotent entity ids like txHash + "-" + logIndex.
+field_selection:
+  transaction_fields:
+    - hash
+
+chains:
+  - id: 84532  # Base Sepolia
+    start_block: 41622000  # Safely before block 41622805 where market 1 was created.
+                           # Note: the broadcast/ deployment record reported a later block
+                           # (41623763), but the contract was actually deployed earlier —
+                           # always cross-check by looking at the on-chain createdAt of the
+                           # earliest market when setting this.
+    contracts:
+      - name: PredictionMarket
+        address: 0x918E967932C90A841663562b501Ffb995430a028
+        handler: src/EventHandlers.ts
+        events:
+          - event: "MarketCreated(uint256 indexed marketId, string question, uint256 resolutionTime, address indexed creator, uint256 fee)"
+          - event: "MarketResolved(uint256 indexed marketId, uint8 winningOutcome, uint256 yesPool, uint256 noPool, uint256 timestamp)"
+          - event: "MarketCancelled(uint256 indexed marketId, uint256 yesPool, uint256 noPool, uint256 timestamp)"
+          - event: "BetPlaced(uint256 indexed marketId, address indexed bettor, uint8 outcome, uint256 amount, uint256 timestamp)"
+          - event: "WinningsClaimed(uint256 indexed marketId, address indexed bettor, uint256 amount, uint256 timestamp)"
+          - event: "ConfigUpdated(address indexed admin, address feeRecipient, uint256 maxFeePercentage)"
+          - event: "ContractPaused(address indexed admin)"
+          - event: "ContractUnpaused(address indexed admin)"
+
+rollback_on_reorg: true

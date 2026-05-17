@@ -4,6 +4,12 @@ import { useQuery } from "@tanstack/react-query";
 import { createPublicClient, http, parseAbiItem } from "viem";
 import { base, baseSepolia, foundry, mainnet, sepolia } from "viem/chains";
 import { CHAIN_ID, PREDICTION_MARKET_ADDRESS, RPC_URL } from "@/lib/contracts";
+import {
+  indexer,
+  indexerEnabled,
+  MARKET_HISTORY_QUERY,
+  type MarketHistoryResponse,
+} from "@/lib/indexer";
 
 export type MarketTrade = {
   /** Strictly-increasing Unix seconds — what lightweight-charts wants for `time`. */
@@ -36,10 +42,10 @@ const BET_PLACED_EVENT = parseAbiItem(
 );
 
 /**
- * We deliberately avoid wagmi's `usePublicClient` here. With pnpm there can be two
- * parallel wagmi installations (different peer-dep hashes), so the hook resolves to
- * a different React `WagmiContext` than the one Privy's `WagmiProvider` populates,
- * throwing `WagmiProviderNotFoundError`. Going straight to viem sidesteps that.
+ * We deliberately avoid wagmi's `usePublicClient` here. Peer-dep tangles can leave
+ * two parallel wagmi installations, so the hook resolves to a different React
+ * `WagmiContext` than the one Privy's `WagmiProvider` populates, throwing
+ * `WagmiProviderNotFoundError`. Going straight to viem sidesteps that.
  */
 function resolveChain() {
   if (CHAIN_ID === base.id) return base;
@@ -88,14 +94,47 @@ export function useMarketHistory(marketId?: bigint, createdAt?: bigint) {
   return useQuery<MarketTrade[]>({
     queryKey: [
       "marketHistory",
+      indexerEnabled ? "indexer" : "rpc",
       PREDICTION_MARKET_ADDRESS,
       marketId?.toString() ?? "none",
       createdAt?.toString() ?? "0",
     ],
     enabled: marketId !== undefined,
-    refetchInterval: 15_000,
+    refetchInterval: indexerEnabled ? 5_000 : 15_000,
     queryFn: async () => {
       if (marketId === undefined) return [];
+
+      // Indexer path — one GraphQL round-trip, no RPC scan.
+      if (indexerEnabled) {
+        const data = await indexer.request<MarketHistoryResponse>(MARKET_HISTORY_QUERY, {
+          marketId: marketId.toString(),
+        });
+
+        let lastTime = -1;
+        return data.Bet.map((b): MarketTrade => {
+          const outcome = (b.outcome === 1 ? 1 : 2) as 1 | 2;
+          const rawTs = Number(b.timestamp);
+          // Same monotonic-bump rule as the RPC path so the chart keeps strict ordering
+          // when multiple bets share a block timestamp.
+          const time = rawTs <= lastTime ? lastTime + 1 : rawTs;
+          lastTime = time;
+          return {
+            time,
+            rawTime: rawTs,
+            value: b.yesProbabilityBps / 100,
+            yesPool: BigInt(b.yesPoolAfter),
+            noPool: BigInt(b.noPoolAfter),
+            bettor: b.bettor_id as `0x${string}`,
+            outcome,
+            amount: BigInt(b.amount),
+            txHash: b.txHash as `0x${string}`,
+            blockNumber: BigInt(b.blockNumber),
+            logIndex: 0, // not stored; only used for chain-order stability, which the indexer already provides
+          };
+        });
+      }
+
+      // RPC fallback — chunked eth_getLogs walk (slow on public testnet RPCs).
 
       const chain = resolveChain();
       const client = createPublicClient({

@@ -1,0 +1,107 @@
+# Stok Market — Envio HyperIndex schema
+# Entity-relational model designed to support the front-end's read paths:
+#   • Market list + filters     → Market
+#   • Market detail             → Market + Bets (most recent N)
+#   • Probability chart         → Bet (yesProbabilityBps over time)
+#   • Trade history table       → Bet (paginated by market)
+#   • User profile / claims     → User + UserPosition + Claim
+#   • Admin audit trail         → ConfigChange + PauseEvent
+
+type Market {
+  # marketId as a decimal string — matches the on-chain uint256
+  id: ID!
+  marketId: BigInt!
+  question: String!
+  resolutionTime: BigInt!
+  creator: String!
+  fee: BigInt!
+
+  # Running pools and derived metrics, updated on every BetPlaced
+  yesPool: BigInt!
+  noPool: BigInt!
+  totalVolume: BigInt!
+  yesProbabilityBps: Int!   # 0..10000 — 5000 means 50% YES
+  betCount: Int!
+
+  # Lifecycle
+  state: String!            # "Active" | "Resolved" | "Cancelled"
+  winningOutcome: Int       # 0 None | 1 Yes | 2 No — set on resolve
+  resolvedAt: BigInt
+  cancelledAt: BigInt
+  totalClaimed: BigInt!     # Sum of WinningsClaimed.amount for this market
+
+  createdAt: BigInt!
+  createdAtBlock: BigInt!
+
+  # Reverse relations (defined by Bet.market / Claim.market / UserPosition.market)
+  bets: [Bet!]! @derivedFrom(field: "market")
+  claims: [Claim!]! @derivedFrom(field: "market")
+  positions: [UserPosition!]! @derivedFrom(field: "market")
+}
+
+type Bet {
+  id: ID!                   # txHash + "-" + logIndex
+  market: Market!
+  bettor: User!
+  outcome: Int!             # 1 Yes | 2 No
+  amount: BigInt!
+
+  # Pool state immediately after this bet — feeds the probability chart
+  yesPoolAfter: BigInt!
+  noPoolAfter: BigInt!
+  yesProbabilityBps: Int!
+
+  timestamp: BigInt!
+  blockNumber: BigInt!
+  txHash: String!
+}
+
+type Claim {
+  id: ID!                   # txHash + "-" + logIndex
+  market: Market!
+  bettor: User!
+  amount: BigInt!
+  timestamp: BigInt!
+  blockNumber: BigInt!
+  txHash: String!
+}
+
+type User {
+  id: ID!                   # lowercased address
+  totalBets: Int!
+  totalVolume: BigInt!
+  totalClaimed: BigInt!
+  firstSeenAt: BigInt!
+
+  bets: [Bet!]! @derivedFrom(field: "bettor")
+  claims: [Claim!]! @derivedFrom(field: "bettor")
+  positions: [UserPosition!]! @derivedFrom(field: "user")
+}
+
+type UserPosition {
+  id: ID!                   # marketId + "-" + userAddress
+  market: Market!
+  user: User!
+  yesAmount: BigInt!
+  noAmount: BigInt!
+  claimed: Boolean!
+  claimAmount: BigInt!      # Set on first claim
+  updatedAt: BigInt!
+}
+
+type ConfigChange {
+  id: ID!                   # txHash + "-" + logIndex
+  admin: String!
+  feeRecipient: String!
+  maxFeePercentage: BigInt!
+  timestamp: BigInt!
+  blockNumber: BigInt!
+}
+
+type PauseEvent {
+  id: ID!                   # txHash + "-" + logIndex
+  admin: String!
+  paused: Boolean!          # true = ContractPaused, false = ContractUnpaused
+  timestamp: BigInt!
+  blockNumber: BigInt!
+}
