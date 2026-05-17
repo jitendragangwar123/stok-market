@@ -45,6 +45,7 @@ npm run codegen     # reads config.yaml + schema.graphql, generates typed bindin
 npm run dev         # starts the indexer + Postgres + Hasura on :8080
 ```
 
+
 Hasura's GraphQL endpoint will be available at <http://localhost:8080/v1/graphql>. The Hasura console is on <http://localhost:8080/console>.
 
 When you edit `schema.graphql` or `config.yaml`, re-run `npm run codegen`.
@@ -124,6 +125,7 @@ If `NEXT_PUBLIC_INDEXER_URL` is **unset**, `use-markets` and `use-market-history
 - **Idempotency:** Bet and Claim entity IDs are `txHash + "-" + logIndex`, so any replay of the same log overwrites the same row — safe.
 - **Empty pools:** `yesProbabilityBps` defaults to `5000` (50%) for a fresh market with no bets, matching the front-end's display convention.
 - **Outcome enum:** `0` = None, `1` = Yes, `2` = No — mirrors the Solidity `Outcome` enum.
+
 
 ## Adding a new event
 
