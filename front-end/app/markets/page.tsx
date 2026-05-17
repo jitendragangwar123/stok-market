@@ -2,11 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { useMarkets } from "@/hooks/use-markets";
-import { Hero } from "@/components/hero";
 import { MarketCard } from "@/components/market-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MarketState } from "@/lib/contracts";
-import { formatTokenWithSymbol } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const FILTERS = [
@@ -21,14 +19,6 @@ export default function MarketsPage() {
   const { markets, isLoading, count } = useMarkets();
   const [filter, setFilter] = useState<FilterId>("all");
 
-  const totalLocked = useMemo(
-    () =>
-      markets
-        .filter((m) => m.state === MarketState.Active)
-        .reduce((sum, m) => sum + m.yesPool + m.noPool, 0n),
-    [markets]
-  );
-
   const filtered = useMemo(() => {
     if (filter === "all") return markets;
     if (filter === "active") return markets.filter((m) => m.state === MarketState.Active);
@@ -37,12 +27,16 @@ export default function MarketsPage() {
   }, [markets, filter]);
 
   return (
-    <div className="space-y-10">
-      <Hero totalMarkets={count} totalLocked={formatTokenWithSymbol(totalLocked)} />
-
+    <div className="space-y-8">
       <section id="markets" className="space-y-5 scroll-mt-24">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-2xl font-semibold tracking-tight">Markets</h2>
+          <div>
+            <h1 className="text-3xl font-semibold tracking-tight">Markets</h1>
+            <p className="mt-1 text-sm text-text-muted">
+              Browse every YES/NO question on Stok Market. Filter by state and click in to take a
+              side.
+            </p>
+          </div>
           <div className="inline-flex items-center gap-1 rounded-xl border border-line bg-bg-card/60 p-1">
             {FILTERS.map((f) => (
               <button
