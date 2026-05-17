@@ -22,31 +22,51 @@ import {
 export const FAUCET_AMOUNT = parseUnits("1000", STABLECOIN_DECIMALS);
 
 /**
- * Shared post-confirmation refresh: when the tx is mined, invalidate every wagmi
- * read so balances, allowances, market state and positions repaint. `isRefreshing`
- * stays true until those refetches resolve so consumers can keep their button in a
- * loading state through the whole sign → mine → refetch window (avoids the
- * "Approve button briefly re-appears after approval" flicker).
+ * Shared post-confirmation refresh.
+ *
+ * 1) Detect the receipt fast. wagmi's default `pollingInterval` is 4 s — on Base
+ *    Sepolia (2 s block time) that means up to ~4 s of extra UI lag after the tx
+ *    is actually mined. We tighten it to 1 s so the button flips quickly.
+ * 2) After `isSuccess`, sweep TanStack Query invalidations. We do the first sweep
+ *    immediately to refetch active reads (balance / allowance / market / position),
+ *    and then fire follow-up sweeps at +2 s, +4 s, +6 s in the background. Some
+ *    public RPCs (looking at you, sepolia.base.org) serve stale state on the first
+ *    read after a block is published; the follow-ups catch that.
+ * 3) `isRefreshing` flips off as soon as the FIRST sweep resolves so the button
+ *    doesn't spin for the full 6 s window — the background sweeps are silent.
  *
  * router.refresh() is intentionally NOT called here — every page that uses these
  * hooks is "use client", so a server-component revalidation just adds latency.
  */
+const FOLLOWUP_DELAYS_MS = [2_000, 4_000, 6_000];
+
 function useTxRefresh(hash: `0x${string}` | undefined) {
   const queryClient = useQueryClient();
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const { isLoading: isMining, isSuccess } = useWaitForTransactionReceipt({ hash });
+  const { isLoading: isMining, isSuccess } = useWaitForTransactionReceipt({
+    hash,
+    pollingInterval: 1_000,
+  });
 
   useEffect(() => {
     if (!isSuccess) return;
     let cancelled = false;
     setIsRefreshing(true);
-    queryClient
-      .invalidateQueries()
-      .finally(() => {
-        if (!cancelled) setIsRefreshing(false);
-      });
+
+    queryClient.invalidateQueries().finally(() => {
+      if (!cancelled) setIsRefreshing(false);
+    });
+
+    const timers = FOLLOWUP_DELAYS_MS.map((delay) =>
+      setTimeout(() => {
+        if (cancelled) return;
+        queryClient.invalidateQueries();
+      }, delay)
+    );
+
     return () => {
       cancelled = true;
+      timers.forEach(clearTimeout);
     };
   }, [isSuccess, queryClient]);
 
@@ -71,7 +91,7 @@ export function useAllowance() {
     abi: ERC20_ABI,
     functionName: "allowance",
     args: address ? [address, PREDICTION_MARKET_ADDRESS] : undefined,
-    query: { enabled: !!address },
+    query: { enabled: !!address, refetchInterval: 4_000 },
   });
 }
 

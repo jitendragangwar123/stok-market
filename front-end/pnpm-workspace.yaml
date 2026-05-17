@@ -4,3 +4,12 @@ allowBuilds:
   es5-ext: set this to true or false
   keccak: set this to true or false
   utf-8-validate: set this to true or false
+
+# Force a single wagmi + viem resolution across the tree. Without this the two
+# direct deps (wagmi, viem) and the transitive ones pulled in by @privy-io/wagmi
+# end up in separate pnpm virtual stores, each with its own React WagmiContext —
+# triggering "WagmiProviderNotFoundError" at random points.
+overrides:
+  wagmi: 2.19.5
+  viem: 2.48.11
+  zod: 3.25.76

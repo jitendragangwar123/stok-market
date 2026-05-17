@@ -46,7 +46,7 @@ export function useUserPosition(id: bigint | undefined, user?: `0x${string}`) {
     abi: PREDICTION_MARKET_ABI,
     functionName: "getUserPosition",
     args: id !== undefined && user ? [id, user] : undefined,
-    query: { enabled: id !== undefined && !!user },
+    query: { enabled: id !== undefined && !!user, refetchInterval: 4_000 },
   }) as ReturnType<typeof useReadContract> & {
     data: { yesBet: bigint; noBet: bigint; claimed: boolean } | undefined;
   };
@@ -80,7 +80,7 @@ export function useCalculatePayout(id: bigint | undefined, user?: `0x${string}`)
     abi: PREDICTION_MARKET_ABI,
     functionName: "calculatePayout",
     args: id !== undefined && user ? [id, user] : undefined,
-    query: { enabled: id !== undefined && !!user },
+    query: { enabled: id !== undefined && !!user, refetchInterval: 8_000 },
   });
 }
 
