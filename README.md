@@ -2,7 +2,7 @@
 
 A simple, pot-based **binary prediction market** smart contract built with Foundry. Users bet a stablecoin on YES/NO outcomes of a question; once the resolution time passes, an admin reports the winner and bettors on the winning side claim a proportional share of the losing pool plus their original stake.
 
-> **Disclaimer.** This contract is for educational purposes. It is unaudited and intentionally minimal — the admin role is centralized (manual resolution), there is no fee on bets, and many production hardening steps are omitted. Do not use as-is in production.
+
 
 ---
 

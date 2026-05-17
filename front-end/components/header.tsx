@@ -28,7 +28,7 @@ export function Header() {
           </Link>
 
           <nav className="hidden items-center gap-1 md:flex">
-            <NavLink href="/">Markets</NavLink>
+            <NavLink href="/markets">Markets</NavLink>
             <NavLink href="/markets/create">Create</NavLink>
             <NavLink href="/admin">Admin</NavLink>
           </nav>

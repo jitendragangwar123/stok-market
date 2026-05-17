@@ -6,11 +6,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { useAllowance, useApprove, useCreateMarket } from "@/hooks/use-actions";
+import {
+  FAUCET_AMOUNT,
+  useAllowance,
+  useApprove,
+  useCreateMarket,
+  useMintTestTokens,
+  useTokenBalance,
+} from "@/hooks/use-actions";
 import { useConnectWallet } from "@/hooks/use-connect-wallet";
-import { parseToken } from "@/lib/format";
+import { formatToken, parseToken } from "@/lib/format";
 import { STABLECOIN_SYMBOL } from "@/lib/contracts";
-import { Calendar, HelpCircle, Sparkles } from "lucide-react";
+import { Calendar, Coins, HelpCircle, Sparkles } from "lucide-react";
 
 const QUICK_DURATIONS = [
   { label: "1 day", seconds: 86_400 },
@@ -28,12 +35,16 @@ export default function CreateMarketPage() {
   const [feeStr, setFeeStr] = useState("0");
 
   const { data: allowance, refetch } = useAllowance();
+  const { data: balance, refetch: refetchBalance } = useTokenBalance();
   const { approve, isPending: approving } = useApprove();
   const { create, isPending: creating } = useCreateMarket();
+  const { mint, isPending: minting } = useMintTestTokens();
 
   const fee = parseToken(feeStr || "0");
   const allowanceBn = (allowance as bigint | undefined) ?? 0n;
+  const balanceBn = (balance as bigint | undefined) ?? 0n;
   const needsApproval = fee > 0n && allowanceBn < fee;
+  const insufficientBalance = fee > 0n && balanceBn < fee;
 
   const ts = Math.floor(new Date(datetime).getTime() / 1000);
   const valid = question.trim().length > 0 && ts > Math.floor(Date.now() / 1000);
@@ -41,7 +52,7 @@ export default function CreateMarketPage() {
   async function onSubmit() {
     if (!valid) return;
     const tx = await create(question.trim(), BigInt(ts), fee);
-    if (tx) router.push("/");
+    if (tx) router.push("/markets");
   }
 
   return (
@@ -57,6 +68,38 @@ export default function CreateMarketPage() {
           the admin then reports the winner.
         </p>
       </div>
+
+      {isConnected && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Coins className="h-4 w-4" /> Your {STABLECOIN_SYMBOL} balance
+            </CardTitle>
+            <CardDescription>
+              You need {STABLECOIN_SYMBOL} to cover the optional creation fee and to place bets.
+              On the testnet you can mint some for free.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-wrap items-center justify-between gap-3">
+            <div className="font-mono text-2xl">
+              {formatToken(balanceBn)}{" "}
+              <span className="text-sm text-text-muted">{STABLECOIN_SYMBOL}</span>
+            </div>
+            <Button
+              variant="secondary"
+              loading={minting}
+              onClick={async () => {
+                await mint(FAUCET_AMOUNT);
+                await refetchBalance();
+              }}
+            >
+              {minting
+                ? "Minting…"
+                : `Get ${formatToken(FAUCET_AMOUNT)} ${STABLECOIN_SYMBOL}`}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
@@ -140,9 +183,22 @@ export default function CreateMarketPage() {
           <Button onClick={connect} size="lg">
             Connect Wallet
           </Button>
+        ) : insufficientBalance ? (
+          <Button
+            size="lg"
+            loading={minting}
+            onClick={async () => {
+              await mint(FAUCET_AMOUNT);
+              await refetchBalance();
+            }}
+          >
+            {minting
+              ? "Minting…"
+              : `Get ${formatToken(FAUCET_AMOUNT)} ${STABLECOIN_SYMBOL}`}
+          </Button>
         ) : needsApproval ? (
           <Button
-            disabled={approving}
+            loading={approving}
             size="lg"
             onClick={async () => {
               await approve(fee);
@@ -153,7 +209,8 @@ export default function CreateMarketPage() {
           </Button>
         ) : (
           <Button
-            disabled={!address || !valid || creating}
+            loading={creating}
+            disabled={!address || !valid}
             size="lg"
             onClick={onSubmit}
           >

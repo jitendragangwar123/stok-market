@@ -3,22 +3,24 @@
 @tailwind utilities;
 
 @layer base {
-  html,
-  body {
-    background: theme(colors.bg.DEFAULT);
-    color: theme(colors.text.DEFAULT);
+  html {
+    background-color: theme('colors.bg.DEFAULT');
+    color: theme('colors.text.DEFAULT');
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     -webkit-font-smoothing: antialiased;
   }
+
   body {
-    background-image:
+    background-image: 
       radial-gradient(ellipse 60% 50% at 50% -10%, rgba(124, 92, 255, 0.18), transparent 60%),
       linear-gradient(180deg, #0a0b10 0%, #07080d 100%);
     background-attachment: fixed;
     min-height: 100vh;
+    margin: 0;
   }
+
   ::selection {
-    background: theme(colors.brand.glow);
+    background-color: theme('colors.brand.glow');
   }
 }
 

@@ -1,14 +1,57 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import {
+  useAccount,
+  useReadContract,
+  useWriteContract,
+  useWaitForTransactionReceipt,
+} from "wagmi";
+import { useQueryClient } from "@tanstack/react-query";
+import { parseUnits } from "viem";
 import { ERC20_ABI, PREDICTION_MARKET_ABI } from "@/lib/abi";
 import {
   PREDICTION_MARKET_ADDRESS,
   STABLECOIN_ADDRESS,
+  STABLECOIN_DECIMALS,
+  STABLECOIN_SYMBOL,
   Outcome,
 } from "@/lib/contracts";
+
+export const FAUCET_AMOUNT = parseUnits("1000", STABLECOIN_DECIMALS);
+
+/**
+ * Shared post-confirmation refresh: when the tx is mined, invalidate every wagmi
+ * read so balances, allowances, market state and positions repaint. `isRefreshing`
+ * stays true until those refetches resolve so consumers can keep their button in a
+ * loading state through the whole sign → mine → refetch window (avoids the
+ * "Approve button briefly re-appears after approval" flicker).
+ *
+ * router.refresh() is intentionally NOT called here — every page that uses these
+ * hooks is "use client", so a server-component revalidation just adds latency.
+ */
+function useTxRefresh(hash: `0x${string}` | undefined) {
+  const queryClient = useQueryClient();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const { isLoading: isMining, isSuccess } = useWaitForTransactionReceipt({ hash });
+
+  useEffect(() => {
+    if (!isSuccess) return;
+    let cancelled = false;
+    setIsRefreshing(true);
+    queryClient
+      .invalidateQueries()
+      .finally(() => {
+        if (!cancelled) setIsRefreshing(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isSuccess, queryClient]);
+
+  return { isMining, isRefreshing, isSuccess };
+}
 
 export function useTokenBalance() {
   const { address } = useAccount();
@@ -35,7 +78,7 @@ export function useAllowance() {
 /** Place a bet. Caller is responsible for ensuring sufficient allowance first. */
 export function usePlaceBet() {
   const { writeContractAsync, data: hash, isPending } = useWriteContract();
-  const { isLoading: isMining, isSuccess } = useWaitForTransactionReceipt({ hash });
+  const { isMining, isRefreshing, isSuccess } = useTxRefresh(hash);
 
   const placeBet = useCallback(
     async (marketId: bigint, outcome: Outcome, amount: bigint) => {
@@ -56,11 +99,58 @@ export function usePlaceBet() {
     [writeContractAsync]
   );
 
-  return { placeBet, hash, isPending: isPending || isMining, isSuccess };
+  return {
+    placeBet,
+    hash,
+    isPending: isPending || isMining || isRefreshing,
+    isSuccess,
+  };
+}
+
+/**
+ * Mint test mUSDC to the connected wallet via the MockERC20 public `mint` entry point.
+ * Only safe on dev/testnet — the production stablecoin will not expose `mint`.
+ */
+export function useMintTestTokens() {
+  const { address } = useAccount();
+  const { writeContractAsync, data: hash, isPending } = useWriteContract();
+  const { isMining, isRefreshing, isSuccess } = useTxRefresh(hash);
+
+  const mint = useCallback(
+    async (amount: bigint = FAUCET_AMOUNT) => {
+      if (!address) {
+        toast.error("Connect a wallet first");
+        return;
+      }
+      try {
+        const tx = await writeContractAsync({
+          address: STABLECOIN_ADDRESS,
+          abi: ERC20_ABI,
+          functionName: "mint",
+          args: [address, amount],
+        });
+        toast.success(`Sent test ${STABLECOIN_SYMBOL}`, {
+          description: tx.slice(0, 14) + "…",
+        });
+        return tx;
+      } catch (e) {
+        toast.error("Faucet failed", { description: parseRevert(e) });
+        throw e;
+      }
+    },
+    [address, writeContractAsync]
+  );
+  return {
+    mint,
+    isPending: isPending || isMining || isRefreshing,
+    isSuccess,
+  };
 }
 
 export function useApprove() {
-  const { writeContractAsync, isPending } = useWriteContract();
+  const { writeContractAsync, data: hash, isPending } = useWriteContract();
+  const { isMining, isRefreshing, isSuccess } = useTxRefresh(hash);
+
   const approve = useCallback(
     async (amount: bigint) => {
       try {
@@ -79,11 +169,17 @@ export function useApprove() {
     },
     [writeContractAsync]
   );
-  return { approve, isPending };
+  return {
+    approve,
+    isPending: isPending || isMining || isRefreshing,
+    isSuccess,
+  };
 }
 
 export function useCreateMarket() {
-  const { writeContractAsync, isPending } = useWriteContract();
+  const { writeContractAsync, data: hash, isPending } = useWriteContract();
+  const { isMining, isRefreshing, isSuccess } = useTxRefresh(hash);
+
   const create = useCallback(
     async (question: string, resolutionTime: bigint, fee: bigint) => {
       try {
@@ -102,11 +198,17 @@ export function useCreateMarket() {
     },
     [writeContractAsync]
   );
-  return { create, isPending };
+  return {
+    create,
+    isPending: isPending || isMining || isRefreshing,
+    isSuccess,
+  };
 }
 
 export function useClaim() {
-  const { writeContractAsync, isPending } = useWriteContract();
+  const { writeContractAsync, data: hash, isPending } = useWriteContract();
+  const { isMining, isRefreshing, isSuccess } = useTxRefresh(hash);
+
   const claim = useCallback(
     async (marketId: bigint) => {
       try {
@@ -125,11 +227,16 @@ export function useClaim() {
     },
     [writeContractAsync]
   );
-  return { claim, isPending };
+  return {
+    claim,
+    isPending: isPending || isMining || isRefreshing,
+    isSuccess,
+  };
 }
 
 export function useAdminActions() {
-  const { writeContractAsync, isPending } = useWriteContract();
+  const { writeContractAsync, data: hash, isPending } = useWriteContract();
+  const { isMining, isRefreshing, isSuccess } = useTxRefresh(hash);
 
   const resolve = useCallback(
     async (id: bigint, outcome: Outcome) => {
@@ -188,7 +295,13 @@ export function useAdminActions() {
     [writeContractAsync]
   );
 
-  return { resolve, cancel, emergencyCancel, isPending };
+  return {
+    resolve,
+    cancel,
+    emergencyCancel,
+    isPending: isPending || isMining || isRefreshing,
+    isSuccess,
+  };
 }
 
 function parseRevert(e: unknown): string {

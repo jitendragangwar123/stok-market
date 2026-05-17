@@ -38,7 +38,7 @@ export default function MarketPage() {
   return (
     <div className="space-y-6">
       <nav className="flex items-center gap-1.5 text-sm text-text-muted">
-        <Link href="/" className="inline-flex items-center gap-1 hover:text-text">
+        <Link href="/markets" className="inline-flex items-center gap-1 hover:text-text">
           <ArrowLeft className="h-3.5 w-3.5" />
           Markets
         </Link>

@@ -3,8 +3,8 @@ pragma solidity ^0.8.24;
 
 import {IERC20} from "./interfaces/IERC20.sol";
 
-/// @title PredictionMarket
-/// @author Simple Binary Prediction Markets
+/// @title PredictionMarket:Simple Binary Prediction Markets
+/// @author Jitendra Kumar
 /// @notice A simple pot-based binary prediction market contract
 /// @dev Implements pot-based binary markets with manual resolution
 /// @custom:security-contact security@example.com
