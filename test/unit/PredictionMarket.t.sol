@@ -6,8 +6,6 @@ import {PredictionMarket} from "../../src/PredictionMarket.sol";
 import {MockERC20} from "../../src/mocks/MockERC20.sol";
 import {IERC20} from "../../src/interfaces/IERC20.sol";
 
-
-
 /// @title PredictionMarketTest
 /// @notice Comprehensive unit tests for PredictionMarket
 contract PredictionMarketTest is Test {
