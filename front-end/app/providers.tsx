@@ -17,7 +17,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         appearance: {
           theme: "dark",
           accentColor: "#7C5CFF",
-          logo: "https://privy.io/logo.png",
+          logo: "https://res.cloudinary.com/domhgozsr/image/upload/v1778518815/stok_market_logo_kyb0bu.svg",
           showWalletLoginFirst: true,
         },
         embeddedWallets: { createOnLogin: "users-without-wallets" },
