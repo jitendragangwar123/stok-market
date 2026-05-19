@@ -71,6 +71,24 @@ export type IndexerUserPosition = {
   updatedAt: string;
 };
 
+export type IndexerUser = {
+  id: string;
+  totalBets: number;
+  totalVolume: string;
+  totalClaimed: string;
+  firstSeenAt: string;
+};
+
+export type IndexerClaim = {
+  id: string;
+  bettor_id: string;
+  amount: string;
+  timestamp: string;
+  blockNumber: string;
+  txHash: string;
+  market: IndexerMarket;
+};
+
 // ---------- Queries ----------
 
 const MARKET_FIELDS = `
@@ -144,12 +162,89 @@ export const USER_POSITION_QUERY = gql`
   }
 `;
 
+export const USER_POSITIONS_QUERY = gql`
+  query UserPositions($user: String!) {
+    UserPosition(
+      where: { user_id: { _eq: $user } }
+      order_by: { updatedAt: desc }
+    ) {
+      id
+      market_id
+      user_id
+      yesAmount
+      noAmount
+      claimed
+      claimAmount
+      updatedAt
+      market {
+        ${MARKET_FIELDS}
+      }
+    }
+  }
+`;
+
+export const LEADERBOARD_QUERY = gql`
+  query Leaderboard($limit: Int!) {
+    byVolume: User(order_by: { totalVolume: desc }, limit: $limit) {
+      id
+      totalBets
+      totalVolume
+      totalClaimed
+      firstSeenAt
+    }
+    byClaimed: User(order_by: { totalClaimed: desc }, limit: $limit) {
+      id
+      totalBets
+      totalVolume
+      totalClaimed
+      firstSeenAt
+    }
+  }
+`;
+
+export const USER_PROFILE_QUERY = gql`
+  query UserProfile($user: String!) {
+    User_by_pk(id: $user) {
+      id
+      totalBets
+      totalVolume
+      totalClaimed
+      firstSeenAt
+    }
+    Claim(
+      where: { bettor_id: { _eq: $user } }
+      order_by: { timestamp: desc }
+    ) {
+      id
+      bettor_id
+      amount
+      timestamp
+      blockNumber
+      txHash
+      market {
+        ${MARKET_FIELDS}
+      }
+    }
+  }
+`;
+
 // ---------- Response wrappers ----------
 
 export type AllMarketsResponse = { Market: IndexerMarket[] };
 export type MarketByIdResponse = { Market_by_pk: IndexerMarket | null };
 export type MarketHistoryResponse = { Bet: IndexerBet[] };
 export type UserPositionResponse = { UserPosition_by_pk: IndexerUserPosition | null };
+export type UserPositionsResponse = {
+  UserPosition: (IndexerUserPosition & { market: IndexerMarket })[];
+};
+export type UserProfileResponse = {
+  User_by_pk: IndexerUser | null;
+  Claim: IndexerClaim[];
+};
+export type LeaderboardResponse = {
+  byVolume: IndexerUser[];
+  byClaimed: IndexerUser[];
+};
 
 // ---------- Mappers (Indexer → on-chain-shaped types) ----------
 

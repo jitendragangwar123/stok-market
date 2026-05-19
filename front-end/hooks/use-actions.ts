@@ -254,6 +254,42 @@ export function useClaim() {
   };
 }
 
+/**
+ * Batch claim across multiple markets in a single tx. The contract silently
+ * skips invalid / already-claimed / no-position / still-active ids, so callers
+ * can pass a best-effort list — but for clearer UX we filter to actually
+ * claimable ids at the call site.
+ */
+export function useClaimMany() {
+  const { writeContractAsync, data: hash, isPending } = useWriteContract();
+  const { isMining, isRefreshing, isSuccess } = useTxRefresh(hash);
+
+  const claimMany = useCallback(
+    async (marketIds: bigint[]) => {
+      if (marketIds.length === 0) return;
+      try {
+        const tx = await writeContractAsync({
+          address: PREDICTION_MARKET_ADDRESS,
+          abi: PREDICTION_MARKET_ABI,
+          functionName: "claimMultipleWinnings",
+          args: [marketIds],
+        });
+        toast.success(`Claiming ${marketIds.length} position${marketIds.length === 1 ? "" : "s"}`);
+        return tx;
+      } catch (e) {
+        toast.error("Claim failed", { description: parseRevert(e) });
+        throw e;
+      }
+    },
+    [writeContractAsync]
+  );
+  return {
+    claimMany,
+    isPending: isPending || isMining || isRefreshing,
+    isSuccess,
+  };
+}
+
 export function useAdminActions() {
   const { writeContractAsync, data: hash, isPending } = useWriteContract();
   const { isMining, isRefreshing, isSuccess } = useTxRefresh(hash);
