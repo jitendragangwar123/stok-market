@@ -43,21 +43,24 @@ function statusFor(
 }
 
 /**
- * All of the connected user's positions across every market, with derived
- * status and payout. Indexer-backed when NEXT_PUBLIC_INDEXER_URL is set —
- * one Hasura query joins UserPosition → Market. RPC fallback fans out
- * getUserPosition across markets returned by useMarkets().
+ * All of `forAddress`'s positions across every market, with derived status
+ * and payout. When `forAddress` is omitted, falls back to the connected
+ * wallet (via useAccount).
  *
- * For finalized + unclaimed rows, calculatePayout is read from the contract
- * (always RPC) so the UI can show a per-row claim amount and a Claim-all total.
+ * Indexer-backed when NEXT_PUBLIC_INDEXER_URL is set — one Hasura query joins
+ * UserPosition → Market. RPC fallback fans out getUserPosition across markets
+ * returned by useMarkets(). For finalized + unclaimed rows, calculatePayout is
+ * read from the contract (always RPC) so the UI can show a per-row claim
+ * amount and a Claim-all total.
  */
-export function useUserPositions(): {
+export function useUserPositions(forAddress?: `0x${string}`): {
   rows: UserPositionRow[];
   claimableIds: bigint[];
   totalClaimable: bigint;
   isLoading: boolean;
 } {
-  const { address } = useAccount();
+  const { address: connected } = useAccount();
+  const address = forAddress ?? connected;
   const lowerAddr = address?.toLowerCase();
 
   // ---- Source A: indexer ----

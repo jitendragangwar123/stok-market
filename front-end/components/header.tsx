@@ -39,10 +39,12 @@ export function Header() {
               <div className="h-10 w-32 animate-pulse rounded-xl bg-bg-elev" />
             ) : isConnected ? (
               <div className="flex items-center gap-2">
-                <Badge variant="active" className="hidden sm:inline-flex">
-                  <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-yes animate-pulse" />
-                  {shortAddr(address)}
-                </Badge>
+                <Link href={`/u/${address}`} title="Your profile">
+                  <Badge variant="active" className="hidden sm:inline-flex hover:bg-brand/25">
+                    <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-yes animate-pulse" />
+                    {shortAddr(address)}
+                  </Badge>
+                </Link>
                 <Button
                   variant="ghost"
                   size="icon"
