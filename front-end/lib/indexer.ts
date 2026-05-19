@@ -183,6 +183,25 @@ export const USER_POSITIONS_QUERY = gql`
   }
 `;
 
+export const LEADERBOARD_QUERY = gql`
+  query Leaderboard($limit: Int!) {
+    byVolume: User(order_by: { totalVolume: desc }, limit: $limit) {
+      id
+      totalBets
+      totalVolume
+      totalClaimed
+      firstSeenAt
+    }
+    byClaimed: User(order_by: { totalClaimed: desc }, limit: $limit) {
+      id
+      totalBets
+      totalVolume
+      totalClaimed
+      firstSeenAt
+    }
+  }
+`;
+
 export const USER_PROFILE_QUERY = gql`
   query UserProfile($user: String!) {
     User_by_pk(id: $user) {
@@ -221,6 +240,10 @@ export type UserPositionsResponse = {
 export type UserProfileResponse = {
   User_by_pk: IndexerUser | null;
   Claim: IndexerClaim[];
+};
+export type LeaderboardResponse = {
+  byVolume: IndexerUser[];
+  byClaimed: IndexerUser[];
 };
 
 // ---------- Mappers (Indexer → on-chain-shaped types) ----------
