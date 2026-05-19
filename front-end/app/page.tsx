@@ -14,6 +14,7 @@ import {
   Flame,
   Layers,
   LineChart,
+  type LucideIcon,
   Sparkles,
   Trophy,
   Users,
@@ -26,16 +27,19 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { MarketState } from "@/lib/contracts";
 import { formatTokenWithSymbol } from "@/lib/format";
+import { CATEGORIES, type Category } from "@/lib/categories";
 
-const CATEGORIES = [
-  { id: "politics", label: "Politics", icon: Vote },
-  { id: "crypto", label: "Crypto", icon: Bitcoin },
-  { id: "sports", label: "Sports", icon: Trophy },
-  { id: "tech", label: "Tech", icon: Cpu },
-  { id: "economy", label: "Economy", icon: LineChart },
-  { id: "culture", label: "Pop Culture", icon: Flame },
-  { id: "world", label: "World", icon: Flag },
-];
+// Icons live on the home page, not in lib/categories.ts, to keep that module
+// data-only (no React/lucide dependency). One entry per non-"Other" category.
+const CATEGORY_ICONS: Record<Exclude<Category, "Other">, LucideIcon> = {
+  Crypto: Bitcoin,
+  Politics: Vote,
+  Sports: Trophy,
+  Tech: Cpu,
+  Economy: LineChart,
+  "Pop Culture": Flame,
+  World: Flag,
+};
 
 const STEPS = [
   {
@@ -271,6 +275,7 @@ function StatTile({
 /* ------------------------------ Categories ------------------------------- */
 
 function Categories() {
+  const items = CATEGORIES.filter((c): c is Exclude<Category, "Other"> => c !== "Other");
   return (
     <section className="space-y-4">
       <div className="flex items-end justify-between gap-3">
@@ -282,18 +287,21 @@ function Categories() {
         </div>
       </div>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
-        {CATEGORIES.map(({ id, label, icon: Icon }) => (
-          <Link
-            key={id}
-            href="/markets"
-            className="group flex flex-col items-center justify-center gap-2 rounded-2xl border border-line bg-bg-card/50 p-4 text-center transition-all hover:border-brand/40 hover:bg-bg-elev"
-          >
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-bg-elev text-brand transition-colors group-hover:bg-brand/15">
-              <Icon className="h-4 w-4" />
-            </span>
-            <span className="text-sm font-medium">{label}</span>
-          </Link>
-        ))}
+        {items.map((id) => {
+          const Icon = CATEGORY_ICONS[id];
+          return (
+            <Link
+              key={id}
+              href={`/markets?category=${encodeURIComponent(id)}`}
+              className="group flex flex-col items-center justify-center gap-2 rounded-2xl border border-line bg-bg-card/50 p-4 text-center transition-all hover:border-brand/40 hover:bg-bg-elev"
+            >
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-bg-elev text-brand transition-colors group-hover:bg-brand/15">
+                <Icon className="h-4 w-4" />
+              </span>
+              <span className="text-sm font-medium">{id}</span>
+            </Link>
+          );
+        })}
       </div>
     </section>
   );
