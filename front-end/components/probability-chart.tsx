@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   AreaSeries,
   ColorType,
@@ -16,6 +16,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Skeleton } from "./ui/skeleton";
 import { Activity, TrendingUp } from "lucide-react";
 import type { MarketTrade } from "@/hooks/use-market-history";
+import { cn } from "@/lib/utils";
+
+const TIMEFRAMES = [
+  { id: "1h", label: "1H", seconds: 3_600 },
+  { id: "1d", label: "1D", seconds: 86_400 },
+  { id: "7d", label: "7D", seconds: 7 * 86_400 },
+  { id: "all", label: "All", seconds: Number.POSITIVE_INFINITY },
+] as const;
+type Timeframe = (typeof TIMEFRAMES)[number]["id"];
 
 export function ProbabilityChart({
   data,
@@ -29,6 +38,7 @@ export function ProbabilityChart({
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Area"> | null>(null);
+  const [timeframe, setTimeframe] = useState<Timeframe>("all");
 
   // Mount the chart once; refresh data via setData on update.
   useEffect(() => {
@@ -128,26 +138,43 @@ export function ProbabilityChart({
     };
   }, []);
 
-  // Push new points whenever the series updates.
+  // Push new points whenever the series updates or the timeframe changes.
   useEffect(() => {
     const series = seriesRef.current;
     const chart = chartRef.current;
     if (!series || !chart) return;
 
-    if (data.length === 0) {
+    const now = Math.floor(Date.now() / 1000);
+    const tf = TIMEFRAMES.find((t) => t.id === timeframe)!;
+    const cutoff =
+      tf.seconds === Number.POSITIVE_INFINITY ? Number.NEGATIVE_INFINITY : now - tf.seconds;
+    const filtered = data.filter((p) => p.time >= cutoff);
+
+    if (filtered.length === 0) {
       // Synthetic flatline at the current probability so the chart isn't blank.
-      const now = Math.floor(Date.now() / 1000);
+      // Span the selected timeframe so the empty window is visually obvious.
+      const startTime =
+        tf.seconds === Number.POSITIVE_INFINITY ? now - 60 : now - tf.seconds;
       series.setData([
-        { time: (now - 60) as UTCTimestamp, value: currentYesPct },
+        { time: startTime as UTCTimestamp, value: currentYesPct },
         { time: now as UTCTimestamp, value: currentYesPct },
       ]);
     } else {
-      series.setData(
-        data.map((p) => ({ time: p.time as UTCTimestamp, value: p.value }))
-      );
+      // When the user picks a narrow window, prepend a synthetic anchor so the
+      // line starts at the carry-over value rather than the first in-window bet
+      // — otherwise the visible series jumps abruptly from the axis.
+      const points = filtered.map((p) => ({
+        time: p.time as UTCTimestamp,
+        value: p.value,
+      }));
+      if (tf.seconds !== Number.POSITIVE_INFINITY && filtered[0].time > cutoff) {
+        const carryValue = lastBefore(data, cutoff) ?? filtered[0].value;
+        points.unshift({ time: cutoff as UTCTimestamp, value: carryValue });
+      }
+      series.setData(points);
     }
     chart.timeScale().fitContent();
-  }, [data, currentYesPct]);
+  }, [data, currentYesPct, timeframe]);
 
   return (
     <Card className="overflow-hidden">
@@ -162,9 +189,12 @@ export function ProbabilityChart({
             bet settled.
           </p>
         </div>
-        <div className="flex items-center gap-1.5 rounded-lg border border-line bg-bg-elev/60 px-2 py-1 text-xs">
-          <TrendingUp className="h-3 w-3 text-yes" />
-          <span className="font-mono">{currentYesPct.toFixed(1)}%</span>
+        <div className="flex items-center gap-2">
+          <TimeframeSelector value={timeframe} onChange={setTimeframe} />
+          <div className="flex items-center gap-1.5 rounded-lg border border-line bg-bg-elev/60 px-2 py-1 text-xs">
+            <TrendingUp className="h-3 w-3 text-yes" />
+            <span className="font-mono">{currentYesPct.toFixed(1)}%</span>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="p-0">
@@ -179,4 +209,48 @@ export function ProbabilityChart({
       </CardContent>
     </Card>
   );
+}
+
+function TimeframeSelector({
+  value,
+  onChange,
+}: {
+  value: Timeframe;
+  onChange: (v: Timeframe) => void;
+}) {
+  return (
+    <div
+      role="tablist"
+      aria-label="Chart timeframe"
+      className="inline-flex items-center gap-0.5 rounded-lg border border-line bg-bg-card/60 p-0.5 text-xs"
+    >
+      {TIMEFRAMES.map((tf) => (
+        <button
+          key={tf.id}
+          type="button"
+          role="tab"
+          aria-selected={value === tf.id}
+          onClick={() => onChange(tf.id)}
+          className={cn(
+            "rounded-md px-2 py-0.5 font-medium transition-colors",
+            value === tf.id
+              ? "bg-bg-elev text-text"
+              : "text-text-muted hover:text-text"
+          )}
+        >
+          {tf.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** Last value before (or at) `cutoff` in a time-sorted series, or null. */
+function lastBefore(data: MarketTrade[], cutoff: number): number | null {
+  let last: number | null = null;
+  for (const p of data) {
+    if (p.time <= cutoff) last = p.value;
+    else break;
+  }
+  return last;
 }

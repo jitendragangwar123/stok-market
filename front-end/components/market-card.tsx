@@ -7,6 +7,7 @@ import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Countdown } from "./countdown";
 import { formatTokenWithSymbol, pct, shortAddr } from "@/lib/format";
+import { categorize } from "@/lib/categories";
 import { TrendingUp } from "lucide-react";
 
 export function MarketCard({ market }: { market: Market }) {
@@ -14,6 +15,7 @@ export function MarketCard({ market }: { market: Market }) {
   const yesPct = pct(market.yesPool, total);
   const noPct = 100 - yesPct;
   const stateBadge = stateBadgeFor(market);
+  const category = categorize(market.question);
 
   return (
     <Link
@@ -25,7 +27,10 @@ export function MarketCard({ market }: { market: Market }) {
 
         <div className="p-5">
           <div className="flex items-start justify-between gap-3">
-            <Badge variant={stateBadge.variant}>{stateBadge.label}</Badge>
+            <div className="flex items-center gap-1.5">
+              <Badge variant={stateBadge.variant}>{stateBadge.label}</Badge>
+              {category !== "Other" && <Badge variant="default">{category}</Badge>}
+            </div>
             {market.state === MarketState.Active ? (
               <Countdown resolutionTime={market.resolutionTime} />
             ) : (
