@@ -144,12 +144,36 @@ export const USER_POSITION_QUERY = gql`
   }
 `;
 
+export const USER_POSITIONS_QUERY = gql`
+  query UserPositions($user: String!) {
+    UserPosition(
+      where: { user_id: { _eq: $user } }
+      order_by: { updatedAt: desc }
+    ) {
+      id
+      market_id
+      user_id
+      yesAmount
+      noAmount
+      claimed
+      claimAmount
+      updatedAt
+      market {
+        ${MARKET_FIELDS}
+      }
+    }
+  }
+`;
+
 // ---------- Response wrappers ----------
 
 export type AllMarketsResponse = { Market: IndexerMarket[] };
 export type MarketByIdResponse = { Market_by_pk: IndexerMarket | null };
 export type MarketHistoryResponse = { Bet: IndexerBet[] };
 export type UserPositionResponse = { UserPosition_by_pk: IndexerUserPosition | null };
+export type UserPositionsResponse = {
+  UserPosition: (IndexerUserPosition & { market: IndexerMarket })[];
+};
 
 // ---------- Mappers (Indexer → on-chain-shaped types) ----------
 
