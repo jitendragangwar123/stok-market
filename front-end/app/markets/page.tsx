@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useMarkets } from "@/hooks/use-markets";
 import { MarketCard } from "@/components/market-card";
@@ -29,7 +29,31 @@ type SortId = (typeof SORTS)[number]["id"];
 
 type CategoryFilter = Category | "all";
 
+/**
+ * useSearchParams() forces this page off Next.js's static prerender path
+ * unless we wrap the consuming component in a Suspense boundary. The
+ * top-level default export is just that boundary; all real logic lives in
+ * MarketsContent below.
+ */
 export default function MarketsPage() {
+  return (
+    <Suspense fallback={<MarketsSkeleton />}>
+      <MarketsContent />
+    </Suspense>
+  );
+}
+
+function MarketsSkeleton() {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <Skeleton key={i} className="h-56" />
+      ))}
+    </div>
+  );
+}
+
+function MarketsContent() {
   const { markets, isLoading, count } = useMarkets();
   const searchParams = useSearchParams();
   const paramCategory = searchParams.get("category");

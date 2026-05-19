@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
 import {
   FAUCET_AMOUNT,
   useAllowance,
@@ -31,8 +32,15 @@ export default function CreateMarketPage() {
   const { isConnected, address, connect } = useConnectWallet();
 
   const [question, setQuestion] = useState("");
-  const [datetime, setDatetime] = useState(toLocalIso(Date.now() + 7 * 86_400 * 1000));
+  const [resolutionAt, setResolutionAt] = useState<Date>(
+    () => new Date(Date.now() + 7 * 86_400 * 1000)
+  );
   const [feeStr, setFeeStr] = useState("0");
+
+  // `now` is frozen on first render so the picker's `min` doesn't drift each
+  // re-render — otherwise selected days briefly disable themselves around
+  // midnight boundaries.
+  const minDate = useMemo(() => new Date(), []);
 
   const { data: allowance, refetch } = useAllowance();
   const { data: balance, refetch: refetchBalance } = useTokenBalance();
@@ -46,7 +54,7 @@ export default function CreateMarketPage() {
   const needsApproval = fee > 0n && allowanceBn < fee;
   const insufficientBalance = fee > 0n && balanceBn < fee;
 
-  const ts = Math.floor(new Date(datetime).getTime() / 1000);
+  const ts = Math.floor(resolutionAt.getTime() / 1000);
   const valid = question.trim().length > 0 && ts > Math.floor(Date.now() / 1000);
 
   async function onSubmit() {
@@ -127,20 +135,14 @@ export default function CreateMarketPage() {
           <CardDescription>When betting closes and the question can be settled.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Input
-            type="datetime-local"
-            value={datetime}
-            onChange={(e) => setDatetime(e.target.value)}
-          />
+          <DateTimePicker value={resolutionAt} onChange={setResolutionAt} min={minDate} />
           <div className="flex flex-wrap gap-2">
             {QUICK_DURATIONS.map((d) => (
               <Button
                 key={d.label}
                 variant="secondary"
                 size="sm"
-                onClick={() =>
-                  setDatetime(toLocalIso(Date.now() + d.seconds * 1000))
-                }
+                onClick={() => setResolutionAt(new Date(Date.now() + d.seconds * 1000))}
               >
                 {d.label}
               </Button>
@@ -222,8 +224,3 @@ export default function CreateMarketPage() {
   );
 }
 
-function toLocalIso(ms: number): string {
-  const d = new Date(ms);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
